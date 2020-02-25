@@ -155,10 +155,10 @@ module Chewy
           ActiveSupport::Notifications.instrument 'import_objects.chewy', type: self do |payload|
             batches = adapter.import_references(*objects, routine.options.slice(:batch_size)).to_a
 
-            ::ActiveRecord::Base.connection.close if defined?(::ActiveRecord::Base)
-            results = ::Parallel.map_with_index(batches, routine.parallel_options, &IMPORT_WORKER.curry[self, routine.options, batches.size])
-            ::ActiveRecord::Base.connection.reconnect! if defined?(::ActiveRecord::Base)
-            errors, import, leftovers = process_parallel_import_results(results)
+            ::ActiveRecord::Base.connection_pool.with_connection do
+              @results = ::Parallel.map_with_index(batches, routine.parallel_options, &IMPORT_WORKER.curry[self, routine.options, batches.size])
+            end
+            errors, import, leftovers = process_parallel_import_results(@results)
 
             if leftovers.present?
               batches = leftovers.each_slice(routine.options[:batch_size])

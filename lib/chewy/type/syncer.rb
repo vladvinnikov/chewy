@@ -144,13 +144,14 @@ module Chewy
       def source_and_index_data
         @source_and_index_data ||= begin
           if @parallel
-            ::ActiveRecord::Base.connection.close if defined?(::ActiveRecord::Base)
-            result = ::Parallel.map(%i[source index], @parallel, &SOURCE_OR_INDEX_DATA_WORKER.curry[self, @type])
-            ::ActiveRecord::Base.connection.reconnect! if defined?(::ActiveRecord::Base)
-            if result.first.keys.first == :source
-              [result.first.values.first, result.second.values.first]
+            ::ActiveRecord::Base.connection_pool.with_connection do
+              @result = ::Parallel.map(%i[source index], @parallel, &SOURCE_OR_INDEX_DATA_WORKER.curry[self, @type])
+            end
+
+            if @result.first.keys.first == :source
+              [@result.first.values.first, @result.second.values.first]
             else
-              [result.second.values.first, result.first.values.first]
+              [@result.second.values.first, @result.first.values.first]
             end
           else
             [fetch_source_data, fetch_index_data]
