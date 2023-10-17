@@ -35,7 +35,7 @@ module Chewy
       #     limit: Chewy::Search::Parameters::Offset.new(10)
       #   )
       # @param initial [{Symbol => Object, Chewy::Search::Parameters::Storage}]
-      def initialize(initial = {})
+      def initialize(initial = {}, **kinitial)
         @storages = Hash.new do |hash, name|
           hash[name] = self.class.storages[name].new
         end
